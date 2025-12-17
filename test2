@@ -1,0 +1,287 @@
+<script>
+    import WeatherLottieIcon from "./lib/WeatherLottieIcon.svelte";
+    import Slider from "./lib/Slider.svelte";
+
+    // --- STATE MANAGEMENT (Svelte 5) ---
+    let dailyForecasts = $state([]);
+    let backgroundVideo = $state("");
+    let city = $state("Heilbronn");
+    let weatherData = $state([]);
+    let loading = $state(false);
+    let error = $state(null);
+    let selectedDayIndex = $state(0);
+    let showVoiceHint = $state(true);
+
+    const TRIGGER_WORD = "Wetter";
+
+    // --- WETTER LOGIK ---
+    async function fetchWeatherData(cityName) {
+        if (!cityName?.trim()) return;
+        loading = true;
+        error = null;
+
+        try {
+            const response = await fetch(`http://localhost:8080/api/weather/${cityName}`);
+            if (!response.ok) throw new Error(`Stadt ${cityName} nicht gefunden`);
+            
+            const newWeatherData = await response.json();
+            weatherData = newWeatherData;
+            processWeatherData();
+        } catch (err) {
+            console.error("Fehler:", err);
+            error = err.message;
+            weatherData = [];
+            dailyForecasts = [];
+        } finally {
+            loading = false;
+        }
+    }
+
+    function processWeatherData() {
+        if (!weatherData || weatherData.length === 0) {
+            dailyForecasts = [];
+            return;
+        }
+
+        dailyForecasts = weatherData.map((item) => ({
+            date: new Date(item.forecastDate),
+            city: item.city,
+            temperature: item.temperature,
+            minTemperature: item.minTemperature,
+            maxTemperature: item.maxTemperature,
+            humidity: item.humidity,
+            pressure: item.pressure || 0,
+            windSpeed: item.windSpeed || 0,
+            pop: item.pop || 0,
+            description: formatGermanWeatherDescription(item.description),
+            iconCode: item.iconCode,
+            weatherCondition: getWeatherConditionFromIcon(item.iconCode),
+        }));
+
+        selectedDayIndex = 0;
+        setVideo(dailyForecasts[0].weatherCondition);
+    }
+
+    function setVideo(condition) {
+        const videoMap = {
+            rain: "/videos/rain.mp4",
+            clear: "/videos/clear.mp4",
+            lightCloudy: "/videos/lightCloudy.mp4",
+            cloudy: "/videos/cloudy.mp4",
+            snow: "/videos/snow.mp4"
+        };
+        backgroundVideo = videoMap[condition] || "";
+    }
+
+    function getWeatherConditionFromIcon(icon) {
+        const map = { "01": "clear", "02": "lightCloudy", "03": "lightCloudy", "04": "cloudy", "09": "rain", "10": "rain", "11": "storm", "13": "snow", "50": "fog" };
+        return map[icon.substring(0, 2)] || "default";
+    }
+
+    function formatGermanWeatherDescription(desc) {
+        return desc.charAt(0).toUpperCase() + desc.slice(1);
+    }
+
+    function formatDate(date) {
+        return new Date(date).toLocaleDateString("de-DE", { weekday: "long", day: "numeric", month: "long" });
+    }
+
+    $effect(() => {
+        if (city) fetchWeatherData(city);
+    });
+</script>
+
+<main>
+    {#if backgroundVideo}
+        {#key backgroundVideo}
+            <video class="background-video" autoplay muted loop playsinline>
+                <source src={backgroundVideo} type="video/mp4"/>
+            </video>
+        {/key}
+    {/if}
+
+    <div class="weather-app">
+        <div class="app-content-wrapper">
+            
+            <div class="app-header">
+                <h1>Wetter Vorhersage</h1>
+                {#if showVoiceHint}
+                    <div class="voice-hint">
+                        <span>💡 Sage "{TRIGGER_WORD} [Stadtname]"</span>
+                        <button onclick={() => showVoiceHint = false}>×</button>
+                    </div>
+                {/if}
+            </div>
+
+            {#if loading}
+                <div class="loading-spinner"></div>
+            {:else if dailyForecasts.length > 0}
+                {@const current = dailyForecasts[selectedDayIndex]}
+
+                <div class="today-weather-card">
+                    <div class="date">{formatDate(current.date)}</div>
+                    <div class="city-name-display">{current.city}</div>
+                    
+                    <div class="weather-main">
+                        <div class="temp-section">
+                            <div class="current-temp">{Math.round(current.temperature)}°C</div>
+                            <div class="min-max">
+                                <span class="min">↓ {Math.round(current.minTemperature)}°</span>
+                                <span class="max">↑ {Math.round(current.maxTemperature)}°</span>
+                            </div>
+                        </div>
+                        
+                        <div class="icon-section">
+                            <WeatherLottieIcon condition={current.weatherCondition}/>
+                            <div class="description">{current.description}</div>
+                        </div>
+                    </div>
+
+                    <div class="extra-details">
+                        <div class="detail-box">
+                            <span class="label">Wind</span>
+                            <span class="value">{current.windSpeed.toFixed(1)} km/h</span>
+                        </div>
+                        <div class="detail-box">
+                            <span class="label">Luftdruck</span>
+                            <span class="value">{current.pressure} hPa</span>
+                        </div>
+                        <div class="detail-box">
+                            <span class="label">Feuchtigkeit</span>
+                            <span class="value">{current.humidity}%</span>
+                        </div>
+                        <div class="detail-box">
+                            <span class="label">Regenrisiko</span>
+                            <span class="value">{Math.round(current.pop * 100)}%</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="map-wrapper">
+                    <iframe
+                        title="Google Maps Satellit"
+                        width="100%"
+                        height="350"
+                        style="border:0;"
+                        loading="lazy"
+                        src="https://maps.google.com/maps?q={encodeURIComponent(current.city)}&t=k&z=10&ie=UTF8&iwloc=&output=embed">
+                    </iframe>
+                </div>
+
+                {#if dailyForecasts.length > 1}
+                    <div class="next-days-header">Kommende Tage</div>
+                    <Slider items={dailyForecasts.slice(1)}/>
+                {/if}
+
+            {:else if error}
+                <div class="error-message">⚠️ {error}</div>
+            {/if}
+        </div>
+    </div>
+</main>
+
+<style>
+    .background-video {
+        position: fixed;
+        top: 0; left: 0;
+        width: 100%; height: 100%;
+        object-fit: cover;
+        z-index: -1;
+    }
+
+    .weather-app {
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        background: rgba(0, 0, 0, 0.4);
+        color: white;
+        padding: 20px;
+        font-family: sans-serif;
+    }
+
+    .app-content-wrapper {
+        width: 100%;
+        max-width: 700px;
+        z-index: 2;
+    }
+
+    .today-weather-card {
+        background: rgba(255, 255, 255, 0.1);
+        backdrop-filter: blur(20px);
+        border-radius: 24px;
+        padding: 30px;
+        margin-bottom: 25px;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .weather-main {
+        display: flex;
+        justify-content: space-around;
+        align-items: center;
+        margin: 25px 0;
+    }
+
+    .current-temp { font-size: 4.5rem; font-weight: bold; }
+
+    .extra-details {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 12px;
+        margin-top: 20px;
+        padding-top: 20px;
+        border-top: 1px solid rgba(255,255,255,0.1);
+    }
+
+    .detail-box {
+        background: rgba(0,0,0,0.3);
+        padding: 12px;
+        border-radius: 15px;
+        text-align: center;
+    }
+
+    .detail-box .label { font-size: 0.75rem; opacity: 0.6; }
+    .detail-box .value { font-size: 1.1rem; font-weight: bold; }
+
+    .map-wrapper {
+        width: 100%;
+        border-radius: 24px;
+        overflow: hidden;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        margin-bottom: 30px;
+    }
+
+    iframe {
+        display: block;
+        filter: contrast(1.1) brightness(0.9) grayscale(10%);
+    }
+
+    .next-days-header { font-size: 1.8rem; text-align: center; margin: 30px 0 20px 0; }
+
+    .loading-spinner {
+        width: 50px; height: 50px;
+        border: 5px solid rgba(255,255,255,0.1);
+        border-top-color: white;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+        margin: 100px auto;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .app-header h1 { font-size: 2.5rem; text-align: center; }
+    .city-name-display { font-size: 2.2rem; font-weight: bold; text-align: center; }
+    .min { color: #4facfe; }
+    .max { color: #f093fb; margin-left: 10px; }
+    
+    .voice-hint {
+        background: rgba(255,255,255,0.15);
+        padding: 10px 20px;
+        border-radius: 15px;
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 20px;
+    }
+    .voice-hint button { background: none; border: none; color: white; cursor: pointer; }
+</style>
