@@ -1,0 +1,145 @@
+# 6.2
+<!-- ForecastDisplay.svelte -->
+<script>
+  export let forecasts = [];
+  export let city = '';
+  
+  // Hilfsfunktionen
+  const formatTime = (timestamp) => {
+    return new Date(timestamp).toLocaleTimeString('de-DE', {
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+  
+  const formatDate = (timestamp) => {
+    const date = new Date(timestamp);
+    const today = new Date();
+    
+    if (date.getDate() === today.getDate()) {
+      return 'Heute';
+    } else if (date.getDate() === today.getDate() + 1) {
+      return 'Morgen';
+    } else {
+      return date.toLocaleDateString('de-DE', { weekday: 'short' });
+    }
+  };
+</script>
+
+<div class="forecast-container">
+  <h2>⏳ 3-Stunden-Vorhersage für {city}</h2>
+  
+  {#if forecasts.length === 0}
+    <p class="no-data">Keine Vorhersagedaten verfügbar.</p>
+  {:else}
+    <div class="forecast-grid">
+      {#each forecasts as forecast, i}
+        <div class="forecast-card">
+          <div class="time-header">
+            <div class="day">{formatDate(forecast.timestamp)}</div>
+            <div class="time">{formatTime(forecast.timestamp)}</div>
+          </div>
+          
+          <div class="weather-main">
+            <div class="temp">{forecast.temperature.toFixed(1)}°C</div>
+            <div class="desc">{forecast.description}</div>
+          </div>
+          
+          <div class="weather-details">
+            <div class="detail">
+              <span>🌬️ Wind:</span>
+              <strong>{forecast.windSpeed.toFixed(1)} m/s</strong>
+            </div>
+            <div class="detail">
+              <span>📊 Druck:</span>
+              <strong>{forecast.pressure} hPa</strong>
+            </div>
+            <div class="detail">
+              <span>💧 Feuchtigkeit:</span>
+              <strong>{forecast.humidity}%</strong>
+            </div>
+            {#if forecast.precipitation > 0}
+              <div class="detail">
+                <span>🌧️ Regen:</span>
+                <strong>{forecast.precipitation} mm</strong>
+              </div>
+            {/if}
+          </div>
+        </div>
+      {/each}
+    </div>
+  {/if}
+</div>
+
+<style>
+  .forecast-container {
+    padding: 20px;
+    max-width: 1000px;
+    margin: 0 auto;
+  }
+  
+  .forecast-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 15px;
+    margin-top: 20px;
+  }
+  
+  .forecast-card {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-radius: 12px;
+    padding: 15px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  }
+  
+  .time-header {
+    text-align: center;
+    margin-bottom: 10px;
+    border-bottom: 1px solid rgba(255,255,255,0.3);
+    padding-bottom: 8px;
+  }
+  
+  .day {
+    font-weight: bold;
+    font-size: 1.1em;
+  }
+  
+  .time {
+    opacity: 0.9;
+  }
+  
+  .weather-main {
+    text-align: center;
+    margin: 15px 0;
+  }
+  
+  .temp {
+    font-size: 1.8em;
+    font-weight: bold;
+  }
+  
+  .desc {
+    font-size: 0.9em;
+    opacity: 0.9;
+  }
+  
+  .weather-details {
+    background: rgba(255,255,255,0.1);
+    border-radius: 8px;
+    padding: 10px;
+  }
+  
+  .detail {
+    display: flex;
+    justify-content: space-between;
+    margin: 5px 0;
+    font-size: 0.9em;
+  }
+  
+  .no-data {
+    text-align: center;
+    padding: 40px;
+    color: #666;
+  }
+</style>
