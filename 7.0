@@ -1,0 +1,87 @@
+<script>
+  import ForecastDisplay from './components/ForecastDisplay.svelte';
+  
+  let forecastData = null;
+  let isLoadingForecast = false;
+  let forecastError = null;
+  
+  // Diese Funktion aufrufen wenn Stadt gewechselt wird
+  async function loadForecast(cityName) {
+    isLoadingForecast = true;
+    forecastError = null;
+    
+    try {
+      const response = await fetch(
+        `http://localhost:8080/api/forecast/${encodeURIComponent(cityName)}`
+      );
+      
+      if (!response.ok) {
+        throw new Error(`API-Fehler: ${response.status}`);
+      }
+      
+      forecastData = await response.json();
+    } catch (err) {
+      forecastError = err.message;
+      console.error('Forecast-Fehler:', err);
+    } finally {
+      isLoadingForecast = false;
+    }
+  }
+  
+  // Beispiel: Bei Seitenaufruf automatisch laden
+  import { onMount } from 'svelte';
+  onMount(() => {
+    loadForecast('Berlin');  // Oder aktuelle Stadt verwenden
+  });
+</script>
+
+<!-- Existierender Wetter-Code... -->
+
+<!-- NEUE VORHERSAGE-ANZEIGE -->
+<div class="forecast-section">
+  <h3>3-Stunden Vorhersage</h3>
+  
+  {#if isLoadingForecast}
+    <p>📡 Lade Vorhersage...</p>
+  {:else if forecastError}
+    <p class="error">❌ Fehler: {forecastError}</p>
+  {:else if forecastData}
+    <ForecastDisplay 
+      forecasts={forecastData.forecasts} 
+      city={forecastData.city} 
+    />
+  {/if}
+  
+  <button on:click={() => loadForecast('Berlin')}>
+    🔄 Vorhersage aktualisieren
+  </button>
+</div>
+
+<style>
+  .forecast-section {
+    margin-top: 40px;
+    padding: 20px;
+    border-top: 2px solid #eee;
+  }
+  
+  .error {
+    color: #e74c3c;
+    padding: 10px;
+    background: #ffeaea;
+    border-radius: 5px;
+  }
+  
+  button {
+    margin-top: 15px;
+    padding: 10px 20px;
+    background: #3498db;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+  }
+  
+  button:hover {
+    background: #2980b9;
+  }
+</style>
