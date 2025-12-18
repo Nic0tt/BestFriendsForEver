@@ -1,0 +1,39 @@
+let myChart; // Variable global speichern, um sie später aktualisieren zu können
+
+async function showWeatherChart(cityName) {
+    const response = await fetch(`/api/weather/${cityName}/chart`);
+    const weatherData = await response.json();
+
+    const ctx = document.getElementById('temperatureChart').getContext('2d');
+
+    // Falls schon ein Chart existiert, zerstören wir ihn vor dem Neuzeichnen
+    if (myChart) { myChart.destroy(); }
+
+    myChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: weatherData.map(d => {
+                // Formatiert das Datum zu "Mo, 15:00"
+                const date = new Date(d.forecastDate);
+                return date.toLocaleTimeString('de-DE', { weekday: 'short', hour: '2-digit', minute: '2-digit' });
+            }),
+            datasets: [{
+                label: 'Temperatur in °C',
+                data: weatherData.map(d => d.temperature),
+                borderColor: '#007bff',
+                backgroundColor: 'rgba(0, 123, 255, 0.1)',
+                fill: true,
+                tension: 0.3
+            }]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                y: {
+                    beginAtZero: false,
+                    title: { display: true, text: 'Grad Celsius' }
+                }
+            }
+        }
+    });
+}
