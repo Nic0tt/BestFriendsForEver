@@ -1,0 +1,20 @@
+<div class="forecast-section">
+    <h3>3-Stunden-Vorhersage</h3>
+    <div class="forecast-wrapper">
+        {#each forecastItems as item}
+            <div class="forecast-card">
+                <span class="time">{new Date(item.forecastDate).getHours()}:00</span>
+                
+                <div class="icon-box">
+                    <img 
+                        src="https://openweathermap.org/img/wn/{item.iconCode}@2x.png" 
+                        alt={item.description} 
+                    />
+                </div>
+                
+                <span class="temp">{Math.round(item.temperature)}°C</span>
+                <span class="desc">{item.description}</span>
+            </div>
+        {/each}
+    </div>
+</div>
