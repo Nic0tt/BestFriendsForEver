@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <title>ITEC Wetter-Diagramm</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        .container { width: 80%; margin: auto; }
+        canvas { background: #f9f9f9; border-radius: 8px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>3-Stunden Wettervorhersage</h1>
+        <canvas id="weatherChart"></canvas>
+    </div>
+
+    <script>
+        const API_KEY = 'EUER_API_KEY_HIER';
+        const CITY = 'Berlin';
+        const URL = `https://api.openweathermap.org/data/2.5/forecast?q=${CITY}&appid=${API_KEY}&units=metric&lang=de`;
+
+        async function fetchWeatherData() {
+            try {
+                const response = await fetch(URL);
+                const data = await response.json();
+
+                // 1. Daten extrahieren (die ersten 8 Einträge = die nächsten 24h)
+                // Oder alle 40 für die vollen 5 Tage
+                const labels = data.list.map(item => {
+                    const date = new Date(item.dt * 1000);
+                    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) + ' (' + date.toLocaleDateString([], {day: '2-digit', month: '2-digit'}) + ')';
+                });
+                
+                const temperatures = data.list.map(item => item.main.temp);
+
+                renderChart(labels, temperatures);
+            } catch (error) {
+                console.error("Fehler beim Abrufen der Daten:", error);
+            }
+        }
+
+        function renderChart(labels, dataPoints) {
+            const ctx = document.getElementById('weatherChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'line', // Linien-Diagramm
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Temperatur (°C)',
+                        data: dataPoints,
+                        borderColor: 'rgb(75, 192, 192)',
+                        backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                        fill: true,
+                        tension: 0.3 // Macht die Linie geschmeidig
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        y: { beginAtZero: false }
+                    }
+                }
+            });
+        }
+
+        fetchWeatherData();
+    </script>
+</body>
+</html>
