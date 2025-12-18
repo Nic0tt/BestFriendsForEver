@@ -1,0 +1,147 @@
+<script>
+    import WeatherLottieIcon from './WeatherLottieIcon.svelte';
+
+    export let items = [];
+    export let currentIndex = 0;
+    export let selectDay = (i) => { currentIndex = i; };
+
+    const formatDay = (dateString) => {
+        const date = new Date(dateString);
+        return {
+            weekday: date.toLocaleDateString('de-DE', { weekday: 'long' }),
+            day: date.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' })
+        };
+    };
+</script>
+
+<div class="weather-container">
+    <header class="list-header">
+        <h2>Vorhersage</h2>
+    </header>
+
+    <div class="weather-list">
+        {#each items as day, index}
+            {@const dateInfo = formatDay(day.date)}
+            <button 
+                class="list-item" 
+                class:active={index === currentIndex}
+                on:click={() => selectDay(index)}
+            >
+                <div class="date-box">
+                    <span class="weekday">{dateInfo.weekday}</span>
+                    <span class="full-date">{dateInfo.day}</span>
+                </div>
+
+                <div class="icon-wrapper">
+                    <WeatherLottieIcon condition={day.weatherCondition} />
+                </div>
+
+                <div class="description-text">
+                    {day.description}
+                </div>
+
+                <div class="temp-display">
+                    <span class="max">{Math.round(day.maxTemperature)}°</span>
+                    <span class="min">{Math.round(day.minTemperature)}°</span>
+                </div>
+            </button>
+        {/each}
+    </div>
+</div>
+
+<style>
+    .weather-container {
+        width: 100%;
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 20px;
+        background: #fdfdfd;
+        border-radius: 20px;
+    }
+
+    .list-header h2 {
+        font-size: 1.5rem;
+        color: #333;
+        margin-bottom: 20px;
+        padding-left: 10px;
+    }
+
+    .weather-list {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .list-item {
+        display: grid;
+        grid-template-columns: 120px 60px 1fr 100px;
+        align-items: center;
+        background: white;
+        border: 1px solid #eee;
+        border-radius: 16px;
+        padding: 12px 20px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        text-align: left;
+    }
+
+    .list-item:hover {
+        background: #f8f9fa;
+        border-color: #ddd;
+        transform: translateY(-2px);
+    }
+
+    .list-item.active {
+        background: #eef6ff;
+        border-color: #007bff;
+        box-shadow: 0 4px 12px rgba(0, 123, 255, 0.1);
+    }
+
+    .date-box {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .weekday {
+        font-weight: 700;
+        font-size: 1.1rem;
+        color: #222;
+    }
+
+    .full-date {
+        font-size: 0.85rem;
+        color: #888;
+    }
+
+    .icon-wrapper {
+        width: 45px;
+        height: 45px;
+    }
+
+    .description-text {
+        padding-left: 20px;
+        font-size: 1.1rem;
+        color: #555;
+    }
+
+    .temp-display {
+        display: flex;
+        justify-content: flex-end;
+        gap: 15px;
+        font-size: 1.2rem;
+        font-weight: bold;
+    }
+
+    .max { color: #ff9900; }
+    .min { color: #007bff; opacity: 0.7; }
+
+    /* Responsive für kleine Bildschirme */
+    @media (max-width: 600px) {
+        .list-item {
+            grid-template-columns: 80px 50px 1fr;
+            padding: 10px;
+        }
+        .description-text { display: none; } /* Text ausblenden auf Handy */
+        .temp-display { font-size: 1rem; }
+    }
+</style>
